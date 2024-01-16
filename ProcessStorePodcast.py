@@ -8,6 +8,7 @@ import yaml
 import os
 from DatabaseManager import DatabaseManager
 from sys import exit
+import spacy
 
 def main():
     model_name = 'sentence-transformers/all-mpnet-base-v2'
@@ -32,8 +33,8 @@ class ProcessStorePodcast:
     def main(self):
         podcasts = Podcast.get_podcast_from_db(self.dbm, self.podcast_name)
         
-        cleaned_podcasts, paragraphs_per_podcast = self.preprocess_podcasts(podcasts)
-    
+        cleaned_podcasts = self.preprocess_podcasts(podcasts)
+
         transcript_vectors = self.encode_podcasts(self.model, cleaned_podcasts)
         
         vector_dim = transcript_vectors.shape[1]
@@ -51,21 +52,23 @@ class ProcessStorePodcast:
         # Update the index with new vectors and ids
         self.update_faiss_index(index, transcript_vectors, self.index_path, ids)
         
-        metadata = self.store_podcasts_in_database(index, transcript_vectors, cleaned_podcasts, ids, paragraphs_per_podcast)
+        metadata = self.store_podcasts_in_database(index, transcript_vectors, cleaned_podcasts, ids)
         self.update_metadata(metadata, self.metadata_path)
     
-    def segment_transcript(self, transcript):
-        # Split the transcript into sentences or chunks
-        # Here we use a simple approach by splitting on periods.
-        # More sophisticated segmentation can be done using NLP libraries like spaCy or NLTK.
-        paragraphs = transcript.split('\n\n')  # Assuming two newlines separate paragraphs
-        segments = []
-        for paragraph_index, paragraph in enumerate(paragraphs):
-            # Further split each paragraph into sentences
-            sentences = paragraph.split('. ')
-            for sentence_index, sentence in enumerate(sentences):
-                segments.append((sentence, paragraph_index, sentence_index))
-        return segments, paragraphs
+    def segment_transcript(self, transcript, window_size=3):
+        # Load the spaCy model for English
+        nlp = spacy.load("en_core_web_sm")
+        
+        # Process the transcript with the NLP model
+        doc = nlp(transcript)
+        
+        # Extract sentences from the processed transcript
+        sentences = [sent.text.strip() for sent in doc.sents]
+        
+        # Group sentences into passages with a sliding window
+        segments = [' '.join(sentences[i:i+window_size]) for i in range(len(sentences) - window_size + 1)]
+        
+        return segments
         
     def preprocess_transcript(self, transcript):
         transcript = transcript.lower()
@@ -74,25 +77,24 @@ class ProcessStorePodcast:
 
     def preprocess_podcasts(self, podcasts):
         cleaned_podcasts = []
-        paragraphs_per_podcast = {}
         for podcast in podcasts:
             cleaned_transcript = self.preprocess_transcript(podcast.transcript)
-            segments, paragraphs = self.segment_transcript(cleaned_transcript)
-            paragraphs_per_podcast[podcast.title] = paragraphs
-            for segment, paragraph_index, _ in segments:
-                cleaned_podcasts.append((podcast.title, podcast.url, segment, paragraph_index))
-        return cleaned_podcasts, paragraphs_per_podcast
+            segments = self.segment_transcript(cleaned_transcript)
+            for segment in segments:
+                cleaned_podcasts.append((podcast.title, podcast.url, segment))
+            print(f"Processed {podcast.title}")
+        return cleaned_podcasts
 
     def encode_podcasts(self, model, podcast_segments):
         # Extract just the segments for encoding
-        transcripts = [segment for title, url, segment, paragraph_index, *_ in podcast_segments]
+        transcripts = [segment for title, url, segment in podcast_segments]
         transcript_vectors = model.encode(transcripts, convert_to_tensor=True)
         return transcript_vectors.cpu().numpy()
 
-    def store_podcasts_in_database(self, index, transcript_vectors, podcast_segments, ids, paragraphs_per_podcast):
+    def store_podcasts_in_database(self, index, transcript_vectors, podcast_segments, ids):
         self.store_vectors_in_database(index, transcript_vectors, ids)
-        metadata = {id: {'title': title, 'url': url, 'segment': segment, 'paragraph_index': paragraph_index, 'paragraph': paragraphs_per_podcast[title][paragraph_index]}
-                    for id, (title, url, segment, paragraph_index) in zip(ids, podcast_segments)}
+        metadata = {id: {'title': title, 'url': url, 'segment': segment}
+                    for id, (title, url, segment) in zip(ids, podcast_segments)}
         return metadata
 
     def create_faiss_index(self, vector_dim):

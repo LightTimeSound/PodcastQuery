@@ -2,8 +2,8 @@ import requests
 from openai import OpenAI
 
 class LLMClient:
-    def __init__(self, base_url):
-        self.client = OpenAI(base_url=base_url, api_key="not-needed")
+    def __init__(self, base_url, api_key="not-needed"):
+        self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = "local-model"
     
     def summarize(self, text, max_tokens=3000):

@@ -1,14 +1,12 @@
 from sentence_transformers import SentenceTransformer
 from LLMClient import LLMClient
-from Podcast import Podcast
 import faiss
 import pickle
 import yaml
-from sys import exit
 
 model_name = 'sentence-transformers/all-mpnet-base-v2'
 llm_client = LLMClient('http://localhost:1234/v1')
-query = 'Getting started creating machine learning models to trade financial markets'
+query = 'Tell me the importance of just surviving in the markets.'
 
 def main():
     model = SentenceTransformer(model_name)
@@ -61,8 +59,7 @@ def retrieve_similar_podcasts(index, metadata, query_vector, top_k=5):
         similar_podcasts.append({
             'title': data['title'],
             'url': data['url'],
-            'segment': data['segment'],
-            'paragraph': data['paragraph']  # Retrieve the full paragraph for context
+            'segment': data['segment']
         })
     return similar_podcasts
 
@@ -70,7 +67,7 @@ def retrieve_similar_podcasts(index, metadata, query_vector, top_k=5):
 def summarize_podcasts(local_llm_client, similar_podcasts):
     summaries = []
     for podcast_metadata in similar_podcasts:
-        summary = local_llm_client.summarize(podcast_metadata['paragraph'])  # Assuming 'transcript' is part of the metadata
+        summary = local_llm_client.summarize(podcast_metadata['segment'])  # Assuming 'transcript' is part of the metadata
         summaries.append({
             'title': podcast_metadata['title'],
             'url': podcast_metadata['url'],
