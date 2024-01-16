@@ -6,16 +6,21 @@ from Podcast import Podcast
 import pickle
 import yaml
 import os
+from DatabaseManager import DatabaseManager
+from sys import exit
 
 def main():
     model_name = 'sentence-transformers/all-mpnet-base-v2'
-    psp = ProcessStorePodcast(model=model_name)
+    podcast_name = 'Flirting With Models'
+    psp = ProcessStorePodcast(model=model_name, podcast_name=podcast_name)
     psp.main()
 
 
 class ProcessStorePodcast:
-    def __init__(self, model):
+    def __init__(self, model, podcast_name):
         self.model = SentenceTransformer(model)
+        self.dbm = DatabaseManager()
+        self.podcast_name = podcast_name
         
         with open("config.yaml", "r") as config_file:
             config = yaml.safe_load(config_file)
@@ -25,7 +30,7 @@ class ProcessStorePodcast:
         
         
     def main(self):
-        podcasts = [Podcast('Title 1', 'URL 1', 'There are positive versions and negative versions: control, willpower, success, action, determination. All very positive things. I think it speaks strongly to how we go about doing things. I think it sets us apart from a lot of projects or teams in the space.'), Podcast('Title 2', 'URL 2', 'If you just have one of those, you’re not going to succeed in trading. And now that we’re building something bigger, it’s even more important. We have this vision. People need this thing, and nobody’s building it. It’s partly because it’s just really hard to build. Our team is like the chariot. We’re just gonna go do it.')]
+        podcasts = Podcast.get_podcast_from_db(self.dbm, self.podcast_name)
         
         cleaned_podcasts, paragraphs_per_podcast = self.preprocess_podcasts(podcasts)
     

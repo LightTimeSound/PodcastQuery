@@ -7,7 +7,7 @@ import yaml
 
 model_name = 'sentence-transformers/all-mpnet-base-v2'
 local_llm_client = LLMClient('http://localhost:1234/v1')
-
+query = 'I want to create my first model for trading at home to have passive income'
 
 def main():
     model = SentenceTransformer(model_name)
@@ -21,8 +21,6 @@ def main():
     index = load_faiss_index(index_path)
     metadata = load_metadata(metadata_path)
     
-    # Generate query vector
-    query = 'Tell me about the chariot'
     query_vector = generate_query_vector(model, query)
     
     # Retrieve and summarize similar podcasts
