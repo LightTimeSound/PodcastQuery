@@ -6,7 +6,7 @@ import yaml
 
 model_name = 'sentence-transformers/all-mpnet-base-v2'
 llm_client = LLMClient('http://localhost:1234/v1')
-query = 'Tell me the importance of just surviving in the markets.'
+query = 'How to get started making my first machine learning model for trading'
 
 def main():
     model = SentenceTransformer(model_name)
