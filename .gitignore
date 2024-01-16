@@ -1,7 +1,5 @@
 #My Stuff
 *.csv
-*.pickle
-*.index
 store_backups.py
 __pycache__/
 .cache/
