@@ -4,10 +4,11 @@ from Podcast import Podcast
 import faiss
 import pickle
 import yaml
+from sys import exit
 
 model_name = 'sentence-transformers/all-mpnet-base-v2'
-local_llm_client = LLMClient('http://localhost:1234/v1')
-query = 'I want to create my first model for trading at home to have passive income'
+llm_client = LLMClient('http://localhost:1234/v1')
+query = 'Getting started creating machine learning models to trade financial markets'
 
 def main():
     model = SentenceTransformer(model_name)
@@ -21,11 +22,14 @@ def main():
     index = load_faiss_index(index_path)
     metadata = load_metadata(metadata_path)
     
-    query_vector = generate_query_vector(model, query)
+    terms = llm_client.convert_query_to_search_terms(query)
+    print(f"Query: {terms}")
+    
+    query_vector = generate_query_vector(model, terms)
     
     # Retrieve and summarize similar podcasts
     similar_podcasts = retrieve_similar_podcasts(index, metadata, query_vector)
-    summaries = summarize_podcasts(local_llm_client, similar_podcasts)
+    summaries = summarize_podcasts(llm_client, similar_podcasts)
     
     # Print or process the summaries along with metadata
     for summary in summaries:
@@ -40,7 +44,6 @@ def load_metadata(metadata_path):
     with open(metadata_path, 'rb') as f:
         metadata = pickle.load(f)
     return metadata
-
 
 # Step 4: Querying with an LLM
 def generate_query_vector(model, query):
