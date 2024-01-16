@@ -3,6 +3,8 @@
 *.pickle
 *.index
 store_backups.py
+__pycache__/
+.cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
